@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"sshmon/monitor"
-	"sshmon/proxy"
+	"SSHadow/monitor"
+	"SSHadow/proxy"
 )
 
 func main() {
@@ -22,6 +22,7 @@ func main() {
 	hostKey := flag.String("hostkey", "", "Path to SSH host private key (proxy/hybrid mode)")
 
 	// Log monitor options
+	// TODO: support multiple log sources
 	logSource := flag.String("log", "/var/log/auth.log", "Log source: file path or 'journald' (logmon/hybrid mode)")
 
 	// Common options

@@ -9,8 +9,9 @@ import (
 	"os"
 	"sync"
 
+	"SSHadow/monitor"
+
 	"golang.org/x/crypto/ssh"
-	"sshmon/monitor"
 )
 
 // Server represents the SSH proxy server
