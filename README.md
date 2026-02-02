@@ -223,6 +223,135 @@ Run with coverage:
 go test -cover ./...
 ```
 
+### Integration Tests
+
+Run integration tests with verbose output to see sample metrics for all authentication methods:
+
+```bash
+# See all auth methods with sample output
+go test -v -run TestIntegrationAllAuthMethods ./monitor/
+
+# See password auth output only
+go test -v -run TestIntegrationPasswordAuth ./monitor/
+
+# See public key auth output only
+go test -v -run TestIntegrationPublicKeyAuth ./monitor/
+
+# See certificate auth output only
+go test -v -run TestIntegrationCertAuth ./monitor/
+
+# See mixed auth with connect/disconnect simulation
+go test -v -run TestIntegrationMixedAuthWithDisconnects ./monitor/
+
+# See full flow from log parsing to output
+go test -v -run TestIntegrationLogParsingToOutput ./monitor/
+```
+
+## Sample Output by Authentication Method
+
+### Password Authentication
+
+**JSON Output:**
+```json
+{
+  "charlie:172.16.0.1": {
+    "SourceIP": "172.16.0.1",
+    "Username": "charlie",
+    "AuthType": "password",
+    "KeyType": "",
+    "KeyID": "",
+    "Fingerprint": "",
+    "Principals": null,
+    "CAFingerprint": "",
+    "ActiveCount": 1,
+    "TotalCount": 1,
+    "FirstSeen": "2026-01-30T10:17:30Z",
+    "LastSeen": "2026-01-30T10:17:30Z"
+  }
+}
+```
+
+**Prometheus Output:**
+```
+ssh_user_active_connections{username="charlie",source_ip="172.16.0.1",auth_type="password",key_id=""} 1
+ssh_user_total_connections{username="charlie",source_ip="172.16.0.1",auth_type="password",key_id=""} 1
+```
+
+### Public Key Authentication
+
+**JSON Output:**
+```json
+{
+  "bob:SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8": {
+    "SourceIP": "10.0.0.50",
+    "Username": "bob",
+    "AuthType": "publickey",
+    "KeyType": "RSA",
+    "KeyID": "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8",
+    "Fingerprint": "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8",
+    "Principals": null,
+    "CAFingerprint": "",
+    "ActiveCount": 1,
+    "TotalCount": 1,
+    "FirstSeen": "2026-01-30T10:16:00Z",
+    "LastSeen": "2026-01-30T10:16:00Z"
+  }
+}
+```
+
+**Prometheus Output:**
+```
+ssh_user_active_connections{username="bob",source_ip="10.0.0.50",auth_type="publickey",key_id="SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8"} 1
+ssh_user_total_connections{username="bob",source_ip="10.0.0.50",auth_type="publickey",key_id="SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8"} 1
+```
+
+### Certificate Authentication
+
+**JSON Output:**
+```json
+{
+  "alice:alice-laptop": {
+    "SourceIP": "192.168.1.100",
+    "Username": "alice",
+    "AuthType": "cert",
+    "KeyType": "ED25519",
+    "KeyID": "alice-laptop",
+    "Fingerprint": "SHA256:abc123def456ghi789jkl012mno345pqr678stu901vwx",
+    "Principals": null,
+    "CAFingerprint": "SHA256:CORPORATE-CA-2024-abc123def456ghi789jkl012",
+    "ActiveCount": 2,
+    "TotalCount": 2,
+    "FirstSeen": "2026-01-30T10:15:23Z",
+    "LastSeen": "2026-01-30T10:45:00Z"
+  }
+}
+```
+
+**Prometheus Output:**
+```
+ssh_user_active_connections{username="alice",source_ip="192.168.1.100",auth_type="cert",key_id="alice-laptop"} 2
+ssh_user_total_connections{username="alice",source_ip="192.168.1.100",auth_type="cert",key_id="alice-laptop"} 2
+```
+
+### Dashboard View (All Auth Types)
+
+```
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                           SSH CONNECTION MONITOR                                 ║
+╠══════════════════════════════════════════════════════════════════════════════════╣
+║ Active Connections: 7                                                            ║
+╠══════════════════════════════════════════════════════════════════════════════════╣
+║ USER       │ SOURCE IP      │ AUTH      │ KEY ID/FINGERPRINT        │ ACT │ TOT  ║
+╠════════════╪════════════════╪═══════════╪═══════════════════════════╪═════╪══════╣
+║ alice      │ 192.168.1.100  │ cert      │ alice-laptop              │   2 │    2 ║
+║ bob        │ 10.0.0.50      │ publickey │ SHA256:nThbg6kXUpJWGl...  │   1 │    1 ║
+║ eve        │ 192.168.50.10  │ publickey │ SHA256:uH7kzJxNShdLrq...  │   1 │    1 ║
+║ charlie    │ 172.16.0.1     │ password  │ -                         │   1 │    1 ║
+║ david      │ 10.0.0.25      │ password  │ -                         │   1 │    1 ║
+║ frank      │ 10.100.200.5   │ cert      │ prod-deploy-key           │   1 │    1 ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+```
+
 ## Integration Examples
 
 ### Prometheus
@@ -261,13 +390,9 @@ curl http://localhost:9090/metrics/json | jq '.' | logger -t SSHadow
 ## Limitations and Considerations
 
 1. **Password forwarding**: The proxy captures passwords to forward them. In high-security environments, consider key/cert-only auth.
-
 2. **Host key verification**: The proxy presents its own host key. Clients will need to accept this key.
-
 3. **Connection multiplexing**: SSH ControlMaster creates multiple logical sessions over one TCP connection. The tracker counts TCP connections.
-
 4. **Performance**: Adds minimal latency (typically <1ms) but all SSH traffic flows through the proxy.
-
 5. **High availability**: For HA setups, run multiple instances behind a load balancer. Connection stats won't be aggregated across instances.
 
 ## Future Enhancements
