@@ -124,15 +124,30 @@ WantedBy=multi-user.target
 ### Dashboard (/)
 Human-readable HTML dashboard with auto-refresh:
 - Active connection count
+- **DoS Detection Views**: Aggregated by IP, user, and key
 - Per-user statistics
 - Auth method breakdown
-- Connection history
+- Visual alerts when thresholds exceeded
 
 ### Prometheus metrics (/metrics)
+
+**DoS Detection Metrics** (pre-aggregated for easy alerting):
 ```
-ssh_active_connections
-ssh_user_active_connections{username="alice",source_ip="192.168.1.100",auth_type="cert",key_id="prod-key-1"}
-ssh_user_total_connections{username="alice",source_ip="192.168.1.100",auth_type="cert",key_id="prod-key-1"}
+# Single-host attack detection - connections per source IP
+ssh_connections_by_ip{source_ip="10.0.0.99"} 8
+
+# Distributed attack detection - connections per user
+ssh_connections_by_user{username="deploy-bot"} 6
+
+# Compromised key detection - connections per key
+ssh_connections_by_key{key_id="SHA256:STOLEN-KEY-xyz789"} 6
+```
+
+**Detailed Metrics**:
+```
+ssh_active_connections 15
+ssh_user_active_connections{username="alice",source_ip="192.168.1.100",auth_type="cert",key_id="alice-laptop"} 2
+ssh_user_total_connections{username="alice",source_ip="192.168.1.100",auth_type="cert",key_id="alice-laptop"} 47
 ```
 
 ### JSON export (/metrics/json)
@@ -246,6 +261,26 @@ go test -v -run TestIntegrationMixedAuthWithDisconnects ./monitor/
 # See full flow from log parsing to output
 go test -v -run TestIntegrationLogParsingToOutput ./monitor/
 ```
+
+### Live Demo (Opens Browser)
+
+Run an interactive demo that starts a real metrics server and opens your browser:
+
+```bash
+# Basic demo with pre-populated DoS scenario data
+go test -v -tags=livedemo -run TestLiveDemo ./monitor/
+
+# Attack simulation - watch the dashboard update in real-time
+go test -v -tags=livedemo -run TestLiveDemoSimulateAttack ./monitor/
+```
+
+The live demo will:
+- Start a metrics server on http://localhost:9099
+- Open your browser automatically
+- Show the dashboard with DoS detection views
+- The attack simulation adds connections in real-time so you can watch alerts appear
+
+Press `Ctrl+C` to stop the demo.
 
 ## Sample Output by Authentication Method
 
@@ -366,18 +401,50 @@ scrape_configs:
 
 ### Alerting
 
-Example alert rule for excessive connections:
+**DoS Detection Alerts** (using pre-aggregated metrics):
+
 ```yaml
 groups:
-  - name: ssh_alerts
+  - name: ssh_dos_detection
     rules:
+      # Scenario 1: Single IP opening too many connections
+      - alert: SSHSingleHostDoS
+        expr: ssh_connections_by_ip > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Potential DoS: {{ $labels.source_ip }} has {{ $value }} connections"
+          description: "Single host opening excessive SSH connections - possible DoS attack"
+
+      # Scenario 2: Same user from many IPs (distributed attack)
+      - alert: SSHDistributedAttackByUser
+        expr: ssh_connections_by_user > 10
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Potential distributed attack: user '{{ $labels.username }}' has {{ $value }} connections"
+          description: "Same username connecting from multiple sources - possible credential compromise"
+
+      # Scenario 3: Same key used from many IPs (compromised key)
+      - alert: SSHCompromisedKey
+        expr: ssh_connections_by_key > 5
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Potential compromised key: {{ $labels.key_id }} used {{ $value }} times"
+          description: "Same SSH key connecting from multiple sources - possible key theft"
+
+      # General high connection warning
       - alert: HighSSHConnections
-        expr: ssh_user_active_connections > 10
+        expr: ssh_active_connections > 50
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "High SSH connection count for {{ $labels.username }}"
+          summary: "High total SSH connections: {{ $value }}"
 ```
 
 ### Log Analysis
