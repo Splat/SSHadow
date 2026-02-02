@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  SSHadow:
+    build: .
+    container_name: SSHadow
+    ports:
+      - "2222:2222"  # SSH proxy port
+      - "9090:9090"  # Metrics port
+    volumes:
+      - ./ssh_host_key:/etc/SSHadow/ssh_host_key:ro
+    environment:
+      - TARGET_SSH_HOST=host.docker.internal:22
+    command: [
+      "-hostkey", "/etc/SSHadow/ssh_host_key",
+      "-listen", ":2222",
+      "-target", "host.docker.internal:22",
+      "-metrics", ":9090"
+    ]
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:

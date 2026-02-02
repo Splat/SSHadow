@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'sshmon'
+    static_configs:
+      - targets: ['sshmon:9090']
+    metric_relabel_configs:
+      # Optionally filter or relabel metrics here
+      - source_labels: [__name__]
+        regex: 'ssh_.*'
+        action: keep
