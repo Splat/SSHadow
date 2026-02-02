@@ -1,8 +1,6 @@
 # SSH Connection Monitor (SSHadow)
 
-A security-focused SSH connection monitoring tool for bastion/jump hosts. Tracks SSH connections and correlates users, authentication methods (password/key/cert), source IPs, and active connection counts.
-
-SSHadow is an SSH connection monitoring tool for bastion hosts with three operating modes:                                                                
+A security-focused SSH connection monitoring tool for bastion/jump hosts. Tracks SSH connections and correlates users, authentication methods (password/key/cert), source IPs, and active connection counts. 
 
 Key components built:
 - `proxy/server.go` - SSH proxy that extracts authentication details
