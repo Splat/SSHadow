@@ -492,8 +492,9 @@ Contributions welcome! Please:
 3. Update documentation
 4. Keep it simple and focused
 
-## Related Work
-
-- NDPeekr: Network Discovery Protocol monitor (see 2600 article)
-- OpenSSH logging and auditing
-- bastillion/ssh-multiplexer projects
+## Releasing
+To release the software please adhere to the Semver versioning scheme which is denoted in the example below. New releases should include the binary in the release.
+```bash                                                                                                                                                  
+  make release                    # builds with git tag as version                                                                                          
+  VERSION=v1.0.0 make release     # builds with explicit version 
+```
