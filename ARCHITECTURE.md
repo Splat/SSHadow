@@ -8,7 +8,7 @@ SSHadow supports three operating modes, each with different trade-offs:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                              SSHadow                                     │
+│                              SSHadow                                    │
 ├─────────────────────┬─────────────────────┬─────────────────────────────┤
 │     Proxy Mode      │   Log Monitor Mode  │        Hybrid Mode          │
 ├─────────────────────┼─────────────────────┼─────────────────────────────┤
@@ -29,21 +29,21 @@ SSHadow supports three operating modes, each with different trade-offs:
          │ SSH (port 2222)
          ▼
 ┌─────────────────────────────────────────┐
-│           SSHadow Proxy                  │
+│           SSHadow Proxy                 │
 │  ┌─────────────────────────────────┐    │
 │  │     SSH Server (handshake)      │    │
 │  │  • Accept connection            │    │
 │  │  • Capture auth metadata        │    │
 │  │  • Cache credentials            │    │
 │  └──────────────┬──────────────────┘    │
-│                 │                        │
+│                 │                       │
 │  ┌──────────────▼──────────────────┐    │
 │  │     SSH Client (to target)      │    │
 │  │  • Connect to sshd              │    │
 │  │  • Forward password auth        │    │
 │  │  • Proxy channels               │    │
 │  └──────────────┬──────────────────┘    │
-│                 │                        │
+│                 │                       │
 │  ┌──────────────▼──────────────────┐    │
 │  │        Connection Tracker       │────┼──► Metrics (:9090)
 │  └─────────────────────────────────┘    │
@@ -51,7 +51,7 @@ SSHadow supports three operating modes, each with different trade-offs:
                   │ SSH (port 22)
                   ▼
 ┌─────────────────────────────────────────┐
-│              sshd                        │
+│              sshd                       │
 └─────────────────────────────────────────┘
 ```
 
@@ -64,25 +64,25 @@ SSHadow supports three operating modes, each with different trade-offs:
          │ SSH (port 22)
          ▼
 ┌─────────────────────────────────────────┐
-│              sshd                        │
-│  • Handles authentication directly       │
+│              sshd                       │
+│  • Handles authentication directly      │
 │  • Logs to auth.log / journald          │
 └────────┬────────────────────────────────┘
          │ Log output
          ▼
 ┌─────────────────────────────────────────┐
-│           SSHadow Log Monitor            │
+│           SSHadow Log Monitor           │
 │  ┌─────────────────────────────────┐    │
 │  │         Log Watcher             │    │
 │  │  • Tail file or journald        │    │
 │  └──────────────┬──────────────────┘    │
-│                 │                        │
+│                 │                       │
 │  ┌──────────────▼──────────────────┐    │
 │  │         Log Parser              │    │
 │  │  • Parse sshd log format        │    │
 │  │  • Extract cert details         │    │
 │  └──────────────┬──────────────────┘    │
-│                 │                        │
+│                 │                       │
 │  ┌──────────────▼──────────────────┐    │
 │  │        Connection Tracker       │────┼──► Metrics (:9090)
 │  └─────────────────────────────────┘    │
@@ -98,35 +98,35 @@ SSHadow supports three operating modes, each with different trade-offs:
          │ SSH (port 2222)
          ▼
 ┌─────────────────────────────────────────┐
-│           SSHadow Proxy                  │
-│  • Intercepts connection                 │
-│  • Captures basic metadata               │
-│  • Forwards to sshd                      │
+│           SSHadow Proxy                 │
+│  • Intercepts connection                │
+│  • Captures basic metadata              │
+│  • Forwards to sshd                     │
 └────────┬────────────────────────────────┘
          │ SSH (port 22)
          ▼
 ┌─────────────────────────────────────────┐
-│              sshd                        │
-│  • Handles final authentication          │
+│              sshd                       │
+│  • Handles final authentication         │
 │  • Logs with full cert details          │
 └────────┬────────────────────────────────┘
          │ Log output
          ▼
 ┌─────────────────────────────────────────┐
-│           SSHadow Log Monitor            │
-│  • Enriches with cert details            │
+│           SSHadow Log Monitor           │
+│  • Enriches with cert details           │
 └────────┬────────────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────────────┐
-│     Shared Connection Tracker            │◄── Both sources feed here
-│  • Unified connection state              │
-│  • Combined statistics                   │
+│     Shared Connection Tracker           │◄── Both sources feed here
+│  • Unified connection state             │
+│  • Combined statistics                  │
 └────────┬────────────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────────────┐
-│        Metrics Server (:9090)            │
+│        Metrics Server (:9090)           │
 └─────────────────────────────────────────┘
 ```
 
