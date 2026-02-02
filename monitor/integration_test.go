@@ -419,7 +419,37 @@ func capturePrometheusOutput(tracker *Tracker) string {
 	fmt.Fprintf(&buf, "# TYPE ssh_active_connections gauge\n")
 	fmt.Fprintf(&buf, "ssh_active_connections %d\n\n", activeConns)
 
-	fmt.Fprintf(&buf, "# HELP ssh_user_active_connections Number of active connections per user\n")
+	// Pre-aggregated metrics for DoS detection
+	byIP := make(map[string]int)
+	byUser := make(map[string]int)
+	byKey := make(map[string]int)
+	for _, stat := range stats {
+		byIP[stat.SourceIP] += stat.ActiveCount
+		byUser[stat.Username] += stat.ActiveCount
+		if stat.KeyID != "" {
+			byKey[stat.KeyID] += stat.ActiveCount
+		}
+	}
+
+	fmt.Fprintf(&buf, "# HELP ssh_connections_by_ip Active connections by source IP (DoS detection)\n")
+	fmt.Fprintf(&buf, "# TYPE ssh_connections_by_ip gauge\n")
+	for ip, count := range byIP {
+		fmt.Fprintf(&buf, "ssh_connections_by_ip{source_ip=\"%s\"} %d\n", ip, count)
+	}
+
+	fmt.Fprintf(&buf, "\n# HELP ssh_connections_by_user Active connections by username (distributed attack detection)\n")
+	fmt.Fprintf(&buf, "# TYPE ssh_connections_by_user gauge\n")
+	for user, count := range byUser {
+		fmt.Fprintf(&buf, "ssh_connections_by_user{username=\"%s\"} %d\n", user, count)
+	}
+
+	fmt.Fprintf(&buf, "\n# HELP ssh_connections_by_key Active connections by key ID (compromised key detection)\n")
+	fmt.Fprintf(&buf, "# TYPE ssh_connections_by_key gauge\n")
+	for keyID, count := range byKey {
+		fmt.Fprintf(&buf, "ssh_connections_by_key{key_id=\"%s\"} %d\n", sanitizeLabel(keyID), count)
+	}
+
+	fmt.Fprintf(&buf, "\n# HELP ssh_user_active_connections Detailed active connections per user/ip/key\n")
 	fmt.Fprintf(&buf, "# TYPE ssh_user_active_connections gauge\n")
 	for _, stat := range stats {
 		labels := fmt.Sprintf(`username="%s",source_ip="%s",auth_type="%s",key_id="%s"`,
@@ -427,7 +457,7 @@ func capturePrometheusOutput(tracker *Tracker) string {
 		fmt.Fprintf(&buf, "ssh_user_active_connections{%s} %d\n", labels, stat.ActiveCount)
 	}
 
-	fmt.Fprintf(&buf, "\n# HELP ssh_user_total_connections Total number of connections per user\n")
+	fmt.Fprintf(&buf, "\n# HELP ssh_user_total_connections Total connections per user/ip/key\n")
 	fmt.Fprintf(&buf, "# TYPE ssh_user_total_connections counter\n")
 	for _, stat := range stats {
 		labels := fmt.Sprintf(`username="%s",source_ip="%s",auth_type="%s",key_id="%s"`,
